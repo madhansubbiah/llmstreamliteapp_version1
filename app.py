@@ -14,26 +14,23 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Function to determine if a proxy should be used based on the IP address
 def get_proxies():
-    # Get the IP address of the machine
-    hostname = socket.gethostname()
-    local_ip = socket.gethostbyname(hostname)
-
-    # Define local network IPs (e.g., 127.0.0.1 or any other local IP)
-    if local_ip in ["127.0.0.1", "::1"] or local_ip.startswith(("192.", "10.", "172.")):
-        proxy = {
-            "http": os.getenv("HTTP_PROXY"),
-            "https": os.getenv("HTTPS_PROXY")
-        }
-        return {k: v for k, v in proxy.items() if v}  # Return only if values exist
-    return None  # No proxy for production or other environments
+    # Get all local IP addresses associated with the host
+    local_ips = [ip[4][0] for ip in socket.getaddrinfo(socket.gethostname(), None)]
+    
+    # Return only valid local IP addresses
+    return local_ips
 
 # Streamlit app
 st.title("Ask Your Question")
 st.write("Type your question below:")
 
 # Debugging: Show environment information
-st.write("Using proxy:", os.getenv("HTTP_PROXY"))
-st.write("Local IP:", socket.gethostbyname(socket.gethostname()))
+proxy_info = os.getenv("HTTP_PROXY")
+st.write("Using proxy:", proxy_info)
+
+# Get local IP addresses
+local_ips = get_proxies()
+st.write("Local IPs:", local_ips)
 
 # Input text area for user's question
 user_question = st.text_area("Question", placeholder="Type your question here...")
@@ -58,7 +55,7 @@ if st.button("Submit"):
     }
 
     # Get proxy settings
-    proxies = get_proxies()
+    proxies = get_proxies()  # Ensure you adjust if you're using proxies elsewhere
     if proxies:
         st.write("Proxy is being used.")
 
