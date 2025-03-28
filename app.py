@@ -76,7 +76,7 @@ if st.button("Submit"):
     # Show loading message while waiting for the response
     with st.spinner("Fetching response..."):
         try:
-            response = requests.post(url, headers=headers, json=data, verify=False, stream=True, proxies=proxies)
+            response = requests.post(url, headers=headers, json=data, verify=False, stream=True)#, proxies=proxies)
             collected_content = ""
 
             # Processing the streamed response line by line
