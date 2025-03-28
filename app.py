@@ -3,6 +3,7 @@ import requests
 import json
 import streamlit as st
 from dotenv import load_dotenv
+import socket
 
 # Load environment variables from .env file
 load_dotenv()
@@ -11,10 +12,14 @@ load_dotenv()
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Function to determine if a proxy should be used
+# Function to determine if a proxy should be used based on the IP address
 def get_proxies():
-    # Check if the app is running in the local environment
-    if os.getenv("ENVIRONMENT") == "LOCAL":
+    # Get the IP address of the machine
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+
+    # Define local network IPs (e.g., 127.0.0.1 or any other local IP)
+    if local_ip in ["127.0.0.1", "::1"] or local_ip.startswith("192.") or local_ip.startswith("10.") or local_ip.startswith("172."):
         proxy = {
             "http": os.getenv("HTTP_PROXY"),
             "https": os.getenv("HTTPS_PROXY")
@@ -28,7 +33,7 @@ st.write("Type your question below:")
 
 # Debugging: Show environment information
 #st.write("Using proxy:", os.getenv("HTTP_PROXY"))
-#st.write("Environment:", os.getenv("ENVIRONMENT"))
+#st.write("Local IP:", socket.gethostbyname(socket.gethostname()))
 
 # Input text area for user's question
 user_question = st.text_area("Question", placeholder="Type your question here...")
