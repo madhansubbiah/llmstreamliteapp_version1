@@ -19,7 +19,7 @@ def get_proxies():
     local_ip = socket.gethostbyname(hostname)
 
     # Define local network IPs (e.g., 127.0.0.1 or any other local IP)
-    if local_ip in ["127.0.0.1", "::1"] or local_ip.startswith("192.") or local_ip.startswith("10.") or local_ip.startswith("172."):
+    if local_ip in ["127.0.0.1", "::1"] or local_ip.startswith(("192.", "10.", "172.")):
         proxy = {
             "http": os.getenv("HTTP_PROXY"),
             "https": os.getenv("HTTPS_PROXY")
@@ -59,25 +59,29 @@ if st.button("Submit"):
 
     # Get proxy settings
     proxies = get_proxies()
+    if proxies:
+        st.write("Proxy is being used.")
 
-    try:
-        response = requests.post(url, headers=headers, json=data, verify=False, stream=True, proxies=proxies)
-        collected_content = ""
+    # Show loading message while waiting for the response
+    with st.spinner("Fetching response..."):
+        try:
+            response = requests.post(url, headers=headers, json=data, verify=False, stream=True, proxies=proxies)
+            collected_content = ""
 
-        # Processing the streamed response line by line
-        for line in response.iter_lines():
-            if line:
-                line_content = line.decode('utf-8').lstrip("data: ").strip()
-                if line_content == "[DONE]":
-                    break
-                try:
-                    json_line = json.loads(line_content)
-                    if 'choices' in json_line and json_line['choices']:
-                        collected_content += json_line['choices'][0]['delta'].get('content', '')
-                except json.JSONDecodeError:
-                    continue
+            # Processing the streamed response line by line
+            for line in response.iter_lines():
+                if line:
+                    line_content = line.decode('utf-8').lstrip("data: ").strip()
+                    if line_content == "[DONE]":
+                        break
+                    try:
+                        json_line = json.loads(line_content)
+                        if 'choices' in json_line and json_line['choices']:
+                            collected_content += json_line['choices'][0]['delta'].get('content', '')
+                    except json.JSONDecodeError:
+                        continue
 
-        st.write("**Response:**")
-        st.write(collected_content)  # Display the collected response
-    except requests.exceptions.RequestException as e:
-        st.error(f"Error during API call: {e}")  # Show error message
+            st.write("**Response:**")
+            st.write(collected_content)  # Display the collected response
+        except requests.exceptions.RequestException as e:
+            st.error(f"Error during API call: {e}")  # Show error message
