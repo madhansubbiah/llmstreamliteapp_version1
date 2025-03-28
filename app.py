@@ -16,10 +16,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 st.title("Ask Your Question")
 st.write("Type your question below:")
 
-# Debugging: Show current proxy settings (removed in final version)
-# proxy_info = os.getenv("HTTP_PROXY")
-# st.write("Using proxy:", proxy_info)
-
 # Get local IP addresses
 local_ips = [ip[4][0] for ip in socket.getaddrinfo(socket.gethostname(), None)]
 st.write("Local IPs:", local_ips)
@@ -46,12 +42,10 @@ if st.button("Submit"):
         "stream": True,
     }
 
-    # Proxies are explicitly set to None
-    proxies = None
-
     # Show loading message while waiting for the response
     with st.spinner("Fetching response..."):
         try:
+            # Attempt to make the API call directly without proxies
             response = requests.post(url, headers=headers, json=data, verify=False, stream=True)
 
             collected_content = ""
