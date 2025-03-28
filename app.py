@@ -12,24 +12,32 @@ load_dotenv()
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Function to determine if a proxy should be used based on the IP address
+# Function to determine if a proxy should be used based on the local IP address
 def get_proxies():
     # Get all local IP addresses associated with the host
     local_ips = [ip[4][0] for ip in socket.getaddrinfo(socket.gethostname(), None)]
     
-    # Return only valid local IP addresses
-    return local_ips
+    # Check if any local IP is a private address (RFC 1918)
+    if any(ip.startswith(("10.", "172.", "192.")) for ip in local_ips):
+        proxy = {
+            "http": os.getenv("HTTP_PROXY"),
+            "https": os.getenv("HTTPS_PROXY")
+        }
+        # Return only valid proxies
+        return {k: v for k, v in proxy.items() if v} if any(proxy.values()) else None
+        
+    return None  # If not local, return None (no proxies)
 
 # Streamlit app
 st.title("Ask Your Question")
 st.write("Type your question below:")
 
-# Debugging: Show environment information
+# Debugging: Show current proxy settings
 proxy_info = os.getenv("HTTP_PROXY")
 st.write("Using proxy:", proxy_info)
 
 # Get local IP addresses
-local_ips = get_proxies()
+local_ips = [ip[4][0] for ip in socket.getaddrinfo(socket.gethostname(), None)]
 st.write("Local IPs:", local_ips)
 
 # Input text area for user's question
@@ -54,10 +62,8 @@ if st.button("Submit"):
         "stream": True,
     }
 
-    # Get proxy settings
-    proxies = get_proxies()  # Ensure you adjust if you're using proxies elsewhere
-    if proxies:
-        st.write("Proxy is being used.")
+    # Get proxy settings based on execution context
+    proxies = get_proxies()  # Adjust as needed
 
     # Show loading message while waiting for the response
     with st.spinner("Fetching response..."):
@@ -68,7 +74,7 @@ if st.button("Submit"):
             # Processing the streamed response line by line
             for line in response.iter_lines():
                 if line:
-                    line_content = line.decode('utf-8').lstrip("data: ").strip()
+                    line_content = line.decode('utf-8').lstrip("data: ").strip()  # Clean the line
                     if line_content == "[DONE]":
                         break
                     try:
