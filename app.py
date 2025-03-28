@@ -32,8 +32,8 @@ st.title("Ask Your Question")
 st.write("Type your question below:")
 
 # Debugging: Show environment information
-#st.write("Using proxy:", os.getenv("HTTP_PROXY"))
-#st.write("Local IP:", socket.gethostbyname(socket.gethostname()))
+st.write("Using proxy:", os.getenv("HTTP_PROXY"))
+st.write("Local IP:", socket.gethostbyname(socket.gethostname()))
 
 # Input text area for user's question
 user_question = st.text_area("Question", placeholder="Type your question here...")
