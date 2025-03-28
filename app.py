@@ -69,7 +69,7 @@ if st.button("Submit"):
     }
 
     # Get proxy settings based on execution context
-    proxies = get_proxies()  # Adjust as needed
+    #proxies = get_proxies()  # Adjust as needed
     print("Proxy being used is ")
     print(proxies)
     # Show loading message while waiting for the response
