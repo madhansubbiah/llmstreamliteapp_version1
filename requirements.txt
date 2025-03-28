@@ -1,5 +1,4 @@
 groq
 python-dotenv
 requests
-json
 streamlit
