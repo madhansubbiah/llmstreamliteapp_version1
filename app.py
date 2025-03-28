@@ -15,16 +15,20 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 def get_proxies():
     # Check if the app is running in the local environment
     if os.getenv("ENVIRONMENT") == "LOCAL":
-        proxy_url = os.getenv("PROXY_URL")
-        return {
-            "http": proxy_url,
-            "https": proxy_url
+        proxy = {
+            "http": os.getenv("HTTP_PROXY"),
+            "https": os.getenv("HTTPS_PROXY")
         }
-    return None  # No proxy for production
+        return {k: v for k, v in proxy.items() if v}  # Return only if values exist
+    return None  # No proxy for production or other environments
 
 # Streamlit app
 st.title("Ask Your Question")
 st.write("Type your question below:")
+
+# Debugging: Show environment information
+#st.write("Using proxy:", os.getenv("HTTP_PROXY"))
+#st.write("Environment:", os.getenv("ENVIRONMENT"))
 
 # Input text area for user's question
 user_question = st.text_area("Question", placeholder="Type your question here...")
@@ -54,7 +58,7 @@ if st.button("Submit"):
     try:
         response = requests.post(url, headers=headers, json=data, verify=False, stream=True, proxies=proxies)
         collected_content = ""
-        
+
         # Processing the streamed response line by line
         for line in response.iter_lines():
             if line:
