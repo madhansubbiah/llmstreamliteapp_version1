@@ -18,7 +18,7 @@ st.write("Type your question below:")
 
 # Get local IP addresses
 local_ips = [ip[4][0] for ip in socket.getaddrinfo(socket.gethostname(), None)]
-st.write("Local IPs:", local_ips)
+#st.write("Local IPs:", local_ips)
 
 # Input text area for user's question
 user_question = st.text_area("Question", placeholder="Type your question here...")
