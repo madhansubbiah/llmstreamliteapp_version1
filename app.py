@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import socket
 
 # Load environment variables from .env file
-#load_dotenv()
+load_dotenv()
 
 # Suppress warnings for verification
 import urllib3
