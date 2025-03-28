@@ -13,20 +13,26 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # Function to determine if a proxy should be used based on the local IP address
+
 def get_proxies():
     # Get all local IP addresses associated with the host
     local_ips = [ip[4][0] for ip in socket.getaddrinfo(socket.gethostname(), None)]
     
-    # Check if any local IP is a private address (RFC 1918)
-    if any(ip.startswith(("10.", "172.", "192.")) for ip in local_ips):
-        proxy = {
-            "http": os.getenv("HTTP_PROXY"),
-            "https": os.getenv("HTTPS_PROXY")
-        }
-        # Return only valid proxies
-        return {k: v for k, v in proxy.items() if v} if any(proxy.values()) else None
-        
-    return None  # If not local, return None (no proxies)
+    # Determine if the application is accessed locally
+    is_local_access = any(ip.startswith(("127.", "192.168.", "10.", "172.")) for ip in local_ips)
+
+    # If accessed locally, return None for proxies
+    if is_local_access:
+        return None  
+
+    # If accessed externally, check for proxy environment variables
+    proxy = {
+        "http": os.getenv("HTTP_PROXY"),
+        "https": os.getenv("HTTPS_PROXY")
+    }
+
+    # Return only valid proxies if any are present
+    return {k: v for k, v in proxy.items() if v} if any(proxy.values()) else None
 
 # Streamlit app
 st.title("Ask Your Question")
