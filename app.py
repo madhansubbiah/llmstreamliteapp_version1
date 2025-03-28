@@ -12,35 +12,13 @@ load_dotenv()
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Function to determine if a proxy should be used based on the local IP address
-
-def get_proxies():
-    # Get all local IP addresses associated with the host
-    local_ips = [ip[4][0] for ip in socket.getaddrinfo(socket.gethostname(), None)]
-    
-    # Determine if the application is accessed locally
-    is_local_access = any(ip.startswith(("127.", "192.168.", "10.", "172.")) for ip in local_ips)
-
-    # If accessed locally, return None for proxies
-    if is_local_access:
-        return None  
-
-    # If accessed externally, check for proxy environment variables
-    proxy = {
-        "http": os.getenv("HTTP_PROXY"),
-        "https": os.getenv("HTTPS_PROXY")
-    }
-
-    # Return only valid proxies if any are present
-    return {k: v for k, v in proxy.items() if v} if any(proxy.values()) else None
-
 # Streamlit app
 st.title("Ask Your Question")
 st.write("Type your question below:")
 
-# Debugging: Show current proxy settings
-proxy_info = os.getenv("HTTP_PROXY")
-st.write("Using proxy:", proxy_info)
+# Debugging: Show current proxy settings (removed in final version)
+# proxy_info = os.getenv("HTTP_PROXY")
+# st.write("Using proxy:", proxy_info)
 
 # Get local IP addresses
 local_ips = [ip[4][0] for ip in socket.getaddrinfo(socket.gethostname(), None)]
@@ -68,15 +46,14 @@ if st.button("Submit"):
         "stream": True,
     }
 
-    # Get proxy settings based on execution context
-    #proxies = get_proxies()  # Adjust as needed
+    # Proxies are explicitly set to None
     proxies = None
-    print("Proxy being used is ")
-    #print(proxies)
+
     # Show loading message while waiting for the response
     with st.spinner("Fetching response..."):
         try:
-            response = requests.post(url, headers=headers, json=data, verify=False, stream=True)#, proxies=proxies)
+            response = requests.post(url, headers=headers, json=data, verify=False, stream=True)
+
             collected_content = ""
 
             # Processing the streamed response line by line
