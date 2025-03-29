@@ -4,6 +4,8 @@ import json
 import streamlit as st
 from dotenv import load_dotenv
 import socket
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
 
 # Load environment variables from .env file
 load_dotenv()
@@ -12,13 +14,20 @@ load_dotenv()
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Streamlit app
+# Set up Streamlit app
 st.title("Ask Your Question")
 st.write("Type your question below:")
 
 # Get local IP addresses
 local_ips = [ip[4][0] for ip in socket.getaddrinfo(socket.gethostname(), None)]
 #st.write("Local IPs:", local_ips)
+
+# Initialize memory in session state for persistent storage
+if 'memory' not in st.session_state:
+    st.session_state.memory = ConversationBufferMemory()
+
+# Create a conversation chain with memory
+conversation = ConversationChain(memory=st.session_state.memory)
 
 # Input text area for user's question
 user_question = st.text_area("Question", placeholder="Type your question here...")
@@ -62,6 +71,10 @@ if st.button("Submit"):
                             collected_content += json_line['choices'][0]['delta'].get('content', '')
                     except json.JSONDecodeError:
                         continue
+
+            # Update memory with user's question and AI's response
+            st.session_state.memory.add_user_message(user_question)
+            st.session_state.memory.add_ai_message(collected_content)
 
             st.write("**Response:**")
             st.write(collected_content)  # Display the collected response
