@@ -4,10 +4,11 @@ import json
 import streamlit as st
 from dotenv import load_dotenv
 import socket
-from langchain.chains import ConversationChain
 from langchain.memory import ConversationBufferMemory
+from langchain.chains import ConversationChain
+from langchain_core.runnables import Runnable  # Import Runnable from the correct module
 
-# Load environment variables from .env file
+# Load environment variables from the .env file
 load_dotenv()
 
 # Suppress warnings for verification
@@ -18,51 +19,42 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 st.title("Ask Your Question")
 st.write("Type your question below:")
 
-# Get local IP addresses
-local_ips = [ip[4][0] for ip in socket.getaddrinfo(socket.gethostname(), None)]
-#st.write("Local IPs:", local_ips)
-
 # Initialize memory in session state for persistent storage
 if 'memory' not in st.session_state:
     st.session_state.memory = ConversationBufferMemory()
 
-# Create a conversation chain with memory
-conversation = ConversationChain(memory=st.session_state.memory)
+# Retrieve the Groq API key from the environment variable
+groq_api_key = os.getenv("API_KEY")  # Ensure you set this in your .env file
 
-# Input text area for user's question
-user_question = st.text_area("Question", placeholder="Type your question here...")
+class GroqLLM(Runnable):
+    def __init__(self, api_key):
+        self.api_key = api_key
+        self.url = "https://api.groq.com/openai/v1/chat/completions"
 
-# Button to submit the question
-if st.button("Submit"):
-    api_key = os.getenv("API_KEY")  # Ensure the variable matches your .env file
-    url = "https://api.groq.com/openai/v1/chat/completions"
+    def invoke(self, inputs):
+        # Extract messages from inputs
+        messages = inputs[0]  # Assuming you're passing a list of messages
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "llama-3.3-70b-versatile",
+            "messages": messages,
+            "temperature": 1,
+            "max_completion_tokens": 1024,
+            "top_p": 1,
+            "stream": True,
+        }
 
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
+        # Disable SSL verification (for testing purposes only)
+        response = requests.post(self.url, headers=headers, json=data, stream=True, verify=False)
 
-    data = {
-        "model": "llama-3.3-70b-versatile",
-        "messages": [{"role": "user", "content": user_question}],
-        "temperature": 1,
-        "max_completion_tokens": 1024,
-        "top_p": 1,
-        "stream": True,
-    }
-
-    # Show loading message while waiting for the response
-    with st.spinner("Fetching response..."):
-        try:
-            # Attempt to make the API call directly without proxies
-            response = requests.post(url, headers=headers, json=data, verify=False, stream=True)
-
+        if response.status_code == 200:
             collected_content = ""
-
-            # Processing the streamed response line by line
             for line in response.iter_lines():
                 if line:
-                    line_content = line.decode('utf-8').lstrip("data: ").strip()  # Clean the line
+                    line_content = line.decode('utf-8').lstrip("data: ").strip()
                     if line_content == "[DONE]":
                         break
                     try:
@@ -71,12 +63,33 @@ if st.button("Submit"):
                             collected_content += json_line['choices'][0]['delta'].get('content', '')
                     except json.JSONDecodeError:
                         continue
+            return collected_content
+        else:
+            raise Exception(f"API call failed: {response.text}")
 
-            # Update memory with user's question and AI's response
-            st.session_state.memory.add_user_message(user_question)
-            st.session_state.memory.add_ai_message(collected_content)
+# Initialize the LLM
+llm = GroqLLM(api_key=groq_api_key)
 
-            st.write("**Response:**")
-            st.write(collected_content)  # Display the collected response
-        except requests.exceptions.RequestException as e:
-            st.error(f"Error during API call: {e}")  # Show error message
+# Initialize the conversation chain with memory and the GroqLLM instance
+conversation = ConversationChain(memory=st.session_state.memory, llm=llm)
+
+# Input text area for user's question
+user_question = st.text_area("Question", placeholder="Type your question here...")
+
+# Button to submit the question
+if st.button("Submit"):
+    if not groq_api_key:
+        st.error("Groq API key is not set. Please check your environment variables.")
+    else:
+        try:
+            with st.spinner("Fetching response..."):
+                # Prepare input for the LLM
+                messages = [{"role": "user", "content": user_question}]
+                response = conversation.llm.invoke([messages])  # Call the GroqLLM via invoke method
+                # Update memory with user's question and AI's response
+                st.session_state.memory.save_context({"input": user_question}, {"output": response})
+                
+                st.write("**Response:**")
+                st.write(response)  # Display the collected response
+        except Exception as e:
+            st.error(f"Error during prediction: {e}")  # Handle errors appropriately
