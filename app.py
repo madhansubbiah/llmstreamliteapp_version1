@@ -3,7 +3,6 @@ import requests
 import json
 import streamlit as st
 from dotenv import load_dotenv
-import socket
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationChain
 from langchain_core.runnables import Runnable  # Import Runnable from the correct module
@@ -83,13 +82,29 @@ if st.button("Submit"):
     else:
         try:
             with st.spinner("Fetching response..."):
-                # Prepare input for the LLM
-                messages = [{"role": "user", "content": user_question}]
-                response = conversation.llm.invoke([messages])  # Call the GroqLLM via invoke method
-                # Update memory with user's question and AI's response
-                st.session_state.memory.save_context({"input": user_question}, {"output": response})
+                # Load previous context from memory
+                loaded_memory = st.session_state.memory.load_memory_variables({"context": True})  # Pass required argument
+                previous_context = loaded_memory.get("history", "")
+
+                # Prepare a fresh user message for this interaction
+                user_message = user_question
+
+                # Combine the previous context and the current user message
+                combined_messages = [{"role": "user", "content": user_message}]
                 
+                # If there is a previous context, include it
+                if previous_context:
+                    combined_messages.insert(0, {"role": "assistant", "content": previous_context})
+
+                # Get the response
+                response = conversation.llm.invoke([combined_messages])  # Call the GroqLLM via invoke method
+
+                # Now save both the user message and model response to memory
+                st.session_state.memory.save_context({"input": user_message}, {"output": response})
+
+                # Display the response
                 st.write("**Response:**")
-                st.write(response)  # Display the collected response
+                st.write(response)
+
         except Exception as e:
-            st.error(f"Error during prediction: {e}")  # Handle errors appropriately
+            st.error(f"Error during prediction: {str(e)}")  # Improved error handling
